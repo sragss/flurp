@@ -7,6 +7,8 @@ import TestPage2 from "./TestPage2";
 import TestPage3 from "./TestPage3";
 import TestPage4 from "./TestPage4";
 import TestPage5 from "./TestPage5";
+import TestPage6 from "./TestPage6";
+import TestPage7 from "./TestPage7";
 
 function TestPage1() {
   const [isGlowing, setIsGlowing] = useState(false);
@@ -175,6 +177,12 @@ function App() {
                   <li>
                     <Link to="/test5" className="text-blue-500 hover:text-blue-700">Test Page 5</Link>
                   </li>
+                  <li>
+                    <Link to="/test6" className="text-blue-500 hover:text-blue-700">Test Page 6</Link>
+                  </li>
+                  <li>
+                    <Link to="/test7" className="text-blue-500 hover:text-blue-700">Test Page 7</Link>
+                  </li>
                 </ul>
               </nav>
               <ul className="list-disc pl-5">
@@ -184,6 +192,8 @@ function App() {
                 <li>Test Page 3 - Third test page</li>
                 <li>Test Page 4 - Fourth test page</li>
                 <li>Test Page 5 - Fifth test page</li>
+                <li>Test Page 6 - Sixth test page</li>
+                <li>Test Page 7 - Seventh test page</li>
               </ul>
             </div>
           } />
@@ -192,6 +202,8 @@ function App() {
           <Route path="/test3" element={<TestPage3 />} />
           <Route path="/test4" element={<TestPage4 />} />
           <Route path="/test5" element={<TestPage5 />} />
+          <Route path="/test6" element={<TestPage6 />} />
+          <Route path="/test7" element={<TestPage7 />} />
         </Routes>
       </main>
     </Router>
