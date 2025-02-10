@@ -8,9 +8,9 @@ import { useRef, useEffect, useState } from 'react';
 
 // Animation constants
 const BORDER_WIDTH_INITIAL = 10;
-const BORDER_WIDTH_PEAK = 40;
+const BORDER_WIDTH_PEAK = 70;
 const BORDER_WIDTH_RANGE = BORDER_WIDTH_PEAK - BORDER_WIDTH_INITIAL;
-const DECAY_SPEED = 0.003;
+const DECAY_SPEED = 0.002;
 const BORDER_COLOR = new THREE.Vector3(0.0196, 0.7804, 0.8); // #05C7CC in RGB
 
 // Define shader material for blurred border
