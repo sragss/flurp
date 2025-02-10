@@ -1,6 +1,5 @@
 import React from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
 import { shaderMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 import { extend } from '@react-three/fiber';
@@ -22,7 +21,7 @@ const ButtonShaderMaterial = shaderMaterial(
     waveAmplitude: WAVE_AMPLITUDE_NORMAL,
     waveSpeed: WAVE_SPEED_NORMAL,
     color: new THREE.Vector3(1, 0, 0), // Default red color
-    color2: new THREE.Vector3(0.5, 0.1, 0), // Dark red color
+    color2: new THREE.Vector3(0.5, 0.1, 0), // Default dark red color
     cornerRadius: 10.0
   },
   // Vertex Shader
@@ -98,25 +97,35 @@ interface ButtonProps {
   children: React.ReactNode;
   className?: string;
   color?: THREE.Vector3;
+  color2?: THREE.Vector3;
 }
 
 interface ButtonMeshProps {
   width: number;
   height: number;
   color?: THREE.Vector3;
+  color2?: THREE.Vector3;
   hovered: boolean;
   clicked: boolean;
 }
 
-const ButtonMesh = ({ width, height, color = new THREE.Vector3(1, 0, 0), hovered, clicked }: ButtonMeshProps) => {
+const ButtonMesh = ({
+  width,
+  height,
+  color = new THREE.Vector3(1, 0, 0),
+  color2 = new THREE.Vector3(0.5, 0.1, 0),
+  hovered,
+  clicked
+}: ButtonMeshProps) => {
   const materialRef = useRef<THREE.ShaderMaterial>();
 
   useEffect(() => {
     if (materialRef.current) {
       materialRef.current.uniforms.resolution.value.set(width, height);
       materialRef.current.uniforms.color.value = color;
+      materialRef.current.uniforms.color2.value = color2;
     }
-  }, [width, height, color]);
+  }, [width, height, color, color2]);
 
   useEffect(() => {
     if (materialRef.current) {
@@ -148,7 +157,7 @@ const ButtonMesh = ({ width, height, color = new THREE.Vector3(1, 0, 0), hovered
   );
 };
 
-const FlurpButton = ({ children, className = "", color }: ButtonProps) => {
+const FlurpButton = ({ children, className = "", color, color2 }: ButtonProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isHovered, setIsHovered] = useState(false);
@@ -159,25 +168,43 @@ const FlurpButton = ({ children, className = "", color }: ButtonProps) => {
       if (containerRef.current) {
         setDimensions({
           width: containerRef.current.offsetWidth,
-          height: containerRef.current.offsetHeight
+          height: containerRef.current.offsetHeight,
         });
       }
     };
 
     updateDimensions();
-    window.addEventListener('resize', updateDimensions);
+    window.addEventListener("resize", updateDimensions);
     return () => {
-      window.removeEventListener('resize', updateDimensions);
+      window.removeEventListener("resize", updateDimensions);
     };
   }, []);
 
-  const handleMouseDown = () => {
-    console.log("Button pressed (mouse down)");
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     setIsClicked(true);
+    // For non-touch devices, emulate hover on press.
+    if (e.pointerType !== "touch") {
+      setIsHovered(true);
+    }
   };
 
-  const handleMouseUp = () => {
-    console.log("Button released (mouse up)");
+  const handlePointerUp = () => {
+    setIsClicked(false);
+  };
+
+  const handlePointerEnter = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse") {
+      setIsHovered(true);
+    }
+  };
+
+  const handlePointerLeave = () => {
+    setIsHovered(false);
+    setIsClicked(false);
+  };
+
+  const handlePointerCancel = () => {
+    setIsHovered(false);
     setIsClicked(false);
   };
 
@@ -185,23 +212,35 @@ const FlurpButton = ({ children, className = "", color }: ButtonProps) => {
     <div ref={containerRef} className={`relative ${className}`}>
       {dimensions.width > 0 && dimensions.height > 0 && (
         <div className="absolute inset-0 z-0 pointer-events-none">
-          <Canvas style={{ width: dimensions.width, height: dimensions.height }} orthographic camera={{ zoom: 1, position: [0, 0, 100] }}>
-            <ButtonMesh width={dimensions.width} height={dimensions.height} color={color} hovered={isHovered} clicked={isClicked} />
+          <Canvas
+            style={{ width: dimensions.width, height: dimensions.height }}
+            orthographic
+            camera={{ zoom: 1, position: [0, 0, 100] }}
+          >
+            <ButtonMesh
+              width={dimensions.width}
+              height={dimensions.height}
+              color={color}
+              color2={color2}
+              hovered={isHovered}
+              clicked={isClicked}
+            />
           </Canvas>
         </div>
       )}
-      <div 
+      <div
         className="absolute inset-0 z-10 backdrop-blur-sm rounded-lg"
-        onMouseEnter={() => { console.log("Mouse entered"); setIsHovered(true); }}
-        onMouseLeave={() => { console.log("Mouse left"); setIsHovered(false); setIsClicked(false); }}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        style={{ 
-          cursor: 'pointer',
-          margin: `${BUTTON_INSET}px`
+        onPointerEnter={handlePointerEnter}
+        onPointerLeave={handlePointerLeave}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        style={{
+          cursor: "pointer",
+          margin: `${BUTTON_INSET}px`,
         }}
       >
-        <div className="w-full h-full flex items-center justify-center transition-transform hover:scale-110">
+        <div className="w-full h-full flex items-center justify-center transition-transform active:scale-110">
           {children}
         </div>
       </div>
@@ -212,22 +251,40 @@ const FlurpButton = ({ children, className = "", color }: ButtonProps) => {
 function TestPage11() {
   return (
     <div className="h-screen w-screen relative flex flex-col items-center justify-center gap-4">
-      <FlurpButton className="w-72 h-20" color={new THREE.Vector3(1, 0, 0)}>
+      <FlurpButton 
+        className="w-72 h-20" 
+        color={new THREE.Vector3(1, 0, 0)} 
+        color2={new THREE.Vector3(0.5, 0.1, 0)}>
         <span className="text-white font-bold">CLICK</span>
       </FlurpButton>
-      <FlurpButton className="w-72 h-10" color={new THREE.Vector3(0, 1, 0)}>
+      <FlurpButton 
+        className="w-72 h-16" 
+        color={new THREE.Vector3(0, 1, 0)}
+        color2={new THREE.Vector3(0, 0.5, 0)}>
         <span className="text-white font-bold hover:text-red-200">PUNCH</span>
       </FlurpButton>
-      <FlurpButton className="w-32 h-12" color={new THREE.Vector3(0.0196, 0.7804, 0.8)}>
+      <FlurpButton 
+        className="w-32 h-16" 
+        color={new THREE.Vector3(0.0196, 0.7804, 0.8)}
+        color2={new THREE.Vector3(0, 0.5, 0.7)}>
         <span className="text-white font-bold">SMACK</span>
       </FlurpButton>
-      <FlurpButton className="w-32 h-16" color={new THREE.Vector3(1, 1, 0)}>
+      <FlurpButton 
+        className="w-32 h-16" 
+        color={new THREE.Vector3(0, 0, 1)}
+        color2={new THREE.Vector3(1, 0.5, 0)}>
         <span className="text-white font-bold">Flurp</span>
       </FlurpButton>
-      <FlurpButton className="w-24 h-16" color={new THREE.Vector3(0.0196, 0.7804, 0.8)}>
+      <FlurpButton 
+        className="w-24 h-16" 
+        color={new THREE.Vector3(0.0196, 0.7804, 0.8)}
+        color2={new THREE.Vector3(0, 0.5, 0.7)}>
         <span className="text-white font-bold">GLURP</span>
       </FlurpButton>
-      <FlurpButton className="w-72 h-72" color={new THREE.Vector3(0.0196, 0.7804, 0.8)}>
+      <FlurpButton 
+        className="w-72 h-72" 
+        color={new THREE.Vector3(0.0196, 0.7804, 0.8)} // Cyan
+        color2={new THREE.Vector3(0.7804, 0.0196, 0.2)}> 
         <span className="text-white font-bold">GLURP</span>
       </FlurpButton>
     </div>
