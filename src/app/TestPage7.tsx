@@ -1,16 +1,25 @@
 import React from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrthographicCamera } from '@react-three/drei';
 import { shaderMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 import { extend } from '@react-three/fiber';
 import { useRef, useEffect, useState } from 'react';
 
+// Animation constants
+const BORDER_WIDTH_INITIAL = 10;
+const BORDER_WIDTH_PEAK = 40;
+const BORDER_WIDTH_RANGE = BORDER_WIDTH_PEAK - BORDER_WIDTH_INITIAL;
+const DECAY_SPEED = 0.003;
+const BORDER_COLOR = new THREE.Vector3(0.0196, 0.7804, 0.8); // #05C7CC in RGB
+
 // Define shader material for blurred border
 const BorderShaderMaterial = shaderMaterial(
   {
     resolution: new THREE.Vector2(800, 600),
-    borderWidth: 10.0
+    borderWidth: BORDER_WIDTH_INITIAL,
+    time: 0.0,
+    color: BORDER_COLOR
   },
   // Vertex Shader
   `
@@ -26,10 +35,21 @@ const BorderShaderMaterial = shaderMaterial(
   varying vec2 vUv;
   uniform vec2 resolution;
   uniform float borderWidth;
+  uniform float time;
+  uniform vec3 color;
 
   void main() {
     // Convert UV to pixel coordinates
     vec2 pixelCoord = vUv * resolution;
+    
+    // Calculate center-relative coordinates
+    vec2 fromCenter = pixelCoord - resolution * 0.5;
+    
+    // Get rotation angle for current pixel
+    float angle = atan(fromCenter.y, fromCenter.x);
+    
+    // Vary border width based on angle and time
+    float variedBorderWidth = borderWidth * (1.0 + 0.3 * sin(angle * 6.0 + time * 8.0));
     
     // Calculate distance from edges
     float distFromLeft = pixelCoord.x;
@@ -40,15 +60,14 @@ const BorderShaderMaterial = shaderMaterial(
     // Find minimum distance to any edge
     float minDist = min(min(distFromLeft, distFromRight), min(distFromTop, distFromBottom));
     
-    // Create smooth border transition
-    float borderIntensity = smoothstep(0.0, borderWidth, minDist);
-    borderIntensity = 1.0 - borderIntensity; // Invert so border is visible
+    // Create smooth border transition with varied width
+    float borderIntensity = smoothstep(0.0, variedBorderWidth, minDist);
+    borderIntensity = 1.0 - borderIntensity;
     
     // Apply Gaussian blur to the border
-    float sigma = borderWidth * 0.3;
+    float sigma = variedBorderWidth * 0.3;
     float blur = exp(-(minDist * minDist) / (2.0 * sigma * sigma));
     
-    vec3 color = vec3(0.0196, 0.7804, 0.8); // #05C7CC converted to RGB
     float alpha = borderIntensity * blur;
     
     gl_FragColor = vec4(color, alpha);
@@ -61,18 +80,25 @@ extend({ BorderShaderMaterial });
 
 const BorderPlane = ({ width, height, borderWidth }: { width: number, height: number, borderWidth: number }) => {
   const ref = useRef<THREE.ShaderMaterial>();
+  const { size } = useThree();
 
   useEffect(() => {
     if (ref.current) {
-      ref.current.uniforms.resolution.value.set(width, height);
+      ref.current.uniforms.resolution.value.set(size.width, size.height);
     }
-  }, [width, height]);
+  }, [size]);
 
   useEffect(() => {
     if (ref.current) {
       ref.current.uniforms.borderWidth.value = borderWidth;
     }
   }, [borderWidth]);
+
+  useFrame(({ clock }) => {
+    if (ref.current) {
+      ref.current.uniforms.time.value = clock.getElapsedTime();
+    }
+  });
 
   return (
     <mesh>
@@ -85,35 +111,44 @@ const BorderPlane = ({ width, height, borderWidth }: { width: number, height: nu
 function TestPage7() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const [borderWidth, setBorderWidth] = useState(10);
+  const [borderWidth, setBorderWidth] = useState(BORDER_WIDTH_INITIAL);
   const animationRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
 
   useEffect(() => {
-    if (containerRef.current) {
-      setDimensions({
-        width: containerRef.current.offsetWidth,
-        height: containerRef.current.offsetHeight
-      });
-    }
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        setDimensions({
+          width: containerRef.current.offsetWidth,
+          height: containerRef.current.offsetHeight
+        });
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+
+    return () => {
+      window.removeEventListener('resize', updateDimensions);
+    };
   }, []);
 
   const handlePulse = () => {
-    setBorderWidth(40);
+    setBorderWidth(BORDER_WIDTH_PEAK);
     lastTimeRef.current = Date.now();
     cancelAnimationFrame(animationRef.current);
     
     const animate = () => {
       const elapsed = Date.now() - lastTimeRef.current;
-      const decay = Math.exp(-elapsed * 0.003);
-      const newWidth = 10 + (80 * decay);
+      const decay = Math.exp(-elapsed * DECAY_SPEED);
+      const newWidth = BORDER_WIDTH_INITIAL + (BORDER_WIDTH_RANGE * decay);
       
       setBorderWidth(newWidth);
       
-      if (newWidth > 10.1) {
+      if (newWidth > BORDER_WIDTH_INITIAL + 0.1) {
         animationRef.current = requestAnimationFrame(animate);
       } else {
-        setBorderWidth(10);
+        setBorderWidth(BORDER_WIDTH_INITIAL);
       }
     };
     
