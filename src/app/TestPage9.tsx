@@ -195,7 +195,7 @@ function TestPage9() {
           <div className="absolute m-auto inset-0 h-fit w-fit flex flex-col gap-4">
             <button
               onClick={handlePulse}
-              className="px-6 py-3 bg-[#4C4C4C] text-white border border-black rounded hover:bg-[#333333] transition-colors font-bold active:scale-95 active:bg-[#222222] transform duration-100"
+              className="px-6 py-3 bg-[#4C4C4C] text-white border border-black rounded hover:bg-[#333333] transition-colors font-bold active:scale-95 active:bg-[#222222] transform duration-100 shadow-lg"
             >
               PULSE
             </button>

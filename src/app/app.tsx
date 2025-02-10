@@ -7,6 +7,7 @@ import TestPage6 from "./TestPage6";
 import TestPage7 from "./TestPage7";
 import TestPage8 from "./TestPage8";
 import TestPage9 from "./TestPage9";
+import TestPage10 from "./TestPage10";
 
 function TestPage1() {
   return (
@@ -78,6 +79,10 @@ function App() {
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                     <Link to="/test9" className="hover:text-blue-700">Test Page 9 - Ninth test page</Link>
                   </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <Link to="/test10" className="hover:text-blue-700">Test Page 10 - Tenth test page</Link>
+                  </li>
                 </ul>
               </div>
             </div>
@@ -91,6 +96,7 @@ function App() {
           <Route path="/test7" element={<TestPage7 />} />
           <Route path="/test8" element={<TestPage8 />} />
           <Route path="/test9" element={<TestPage9 />} />
+          <Route path="/test10" element={<TestPage10 />} />
         </Routes>
       </main>
     </Router>
