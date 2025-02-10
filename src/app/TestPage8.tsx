@@ -7,11 +7,12 @@ import { extend } from '@react-three/fiber';
 import { useRef, useEffect, useState } from 'react';
 
 // Animation constants
-const BORDER_WIDTH_INITIAL = 10;
+const BORDER_WIDTH_INITIAL = 20;
 const BORDER_WIDTH_PEAK = 70;
 const BORDER_WIDTH_RANGE = BORDER_WIDTH_PEAK - BORDER_WIDTH_INITIAL;
 const DECAY_SPEED = 0.002;
 const BORDER_COLOR = new THREE.Vector3(0.0196, 0.7804, 0.8); // #05C7CC in RGB
+const CORNER_RADIUS = 20.0;
 
 // Define shader material for blurred border
 const BorderShaderMaterial = shaderMaterial(
@@ -19,7 +20,8 @@ const BorderShaderMaterial = shaderMaterial(
     resolution: new THREE.Vector2(800, 600),
     borderWidth: BORDER_WIDTH_INITIAL,
     time: 0.0,
-    color: BORDER_COLOR
+    color: BORDER_COLOR,
+    cornerRadius: CORNER_RADIUS,
   },
   // Vertex Shader
   `
@@ -37,6 +39,7 @@ const BorderShaderMaterial = shaderMaterial(
   uniform float borderWidth;
   uniform float time;
   uniform vec3 color;
+  uniform float cornerRadius;
 
   void main() {
     // Convert UV to pixel coordinates
@@ -56,6 +59,30 @@ const BorderShaderMaterial = shaderMaterial(
     float distFromRight = resolution.x - pixelCoord.x;
     float distFromTop = resolution.y - pixelCoord.y;
     float distFromBottom = pixelCoord.y;
+
+    // Calculate bottom left corner rounding
+    float bl_c2 = cornerRadius - distance(pixelCoord, vec2(cornerRadius, cornerRadius));
+    distFromBottom = mix(distFromBottom, bl_c2,
+        float(bl_c2 <= cornerRadius && bl_c2 < distFromBottom && 
+              pixelCoord.x <= cornerRadius && pixelCoord.y <= cornerRadius));
+
+    // Calculate bottom right corner rounding
+    float br_c2 = cornerRadius - distance(pixelCoord, vec2(resolution.x - cornerRadius, cornerRadius));
+    distFromBottom = mix(distFromBottom, br_c2,
+        float(br_c2 <= cornerRadius && br_c2 < distFromBottom && 
+              pixelCoord.x >= resolution.x - cornerRadius && pixelCoord.y <= cornerRadius));
+
+    // Calculate top left corner rounding
+    float tl_c2 = cornerRadius - distance(pixelCoord, vec2(cornerRadius, resolution.y - cornerRadius));
+    distFromTop = mix(distFromTop, tl_c2,
+        float(tl_c2 <= cornerRadius && tl_c2 < distFromTop && 
+              pixelCoord.x <= cornerRadius && pixelCoord.y >= resolution.y - cornerRadius));
+
+    // Calculate top right corner rounding
+    float tr_c2 = cornerRadius - distance(pixelCoord, vec2(resolution.x - cornerRadius, resolution.y - cornerRadius));
+    distFromTop = mix(distFromTop, tr_c2,
+        float(tr_c2 <= cornerRadius && tr_c2 < distFromTop && 
+              pixelCoord.x >= resolution.x - cornerRadius && pixelCoord.y >= resolution.y - cornerRadius));
     
     // Find minimum distance to any edge
     float minDist = min(min(distFromLeft, distFromRight), min(distFromTop, distFromBottom));
@@ -70,6 +97,7 @@ const BorderShaderMaterial = shaderMaterial(
     
     float alpha = borderIntensity * blur;
     
+    // Original output
     gl_FragColor = vec4(color, alpha);
   }
   `
